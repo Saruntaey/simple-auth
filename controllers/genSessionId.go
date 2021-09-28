@@ -17,8 +17,10 @@ func (c *Controller) genSessionId(userId bson.ObjectId) bson.ObjectId {
 	}
 	session := models.Session{
 		Id:      bson.NewObjectId(),
-		User:    userId,
 		Expired: time.Now().Add(time.Minute * time.Duration(exp)),
+	}
+	if len(userId) > 0 {
+		session.User = userId
 	}
 	err = c.appConfig.Session.Insert(session)
 	if err != nil {

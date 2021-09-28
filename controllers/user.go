@@ -33,12 +33,24 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case http.MethodGet:
+		session, flashMsg, err := c.getSession(w, r)
+		// check if user already login
+		if err == nil && len(session.User) > 0 {
+			http.Redirect(w, r, "/me", http.StatusSeeOther)
+			return
+		}
+
 		data := data{
 			Title: "register",
+		}
+		// add flash message to data
+		if err == nil {
+			data.FlashMsg = flashMsg
 		}
 		c.render(w, "register", data)
 
 	case http.MethodPost:
+		session, _, errGetSession := c.getSession(w, r)
 		r.ParseForm()
 
 		User := c.appConfig.DbConn.Model("User")
@@ -58,26 +70,27 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 				msg += ", "
 			}
 			msg = strings.TrimRight(msg, ", ")
-			http.Error(w, msg, http.StatusBadRequest)
+			c.flashAndRedirect(w, r, errGetSession, session, msg, "/register")
 			return
+
 		}
 
 		err := user.HashPassword()
 		if err != nil {
 			msg := err.Error()
-			http.Error(w, msg, http.StatusBadRequest)
+			c.flashAndRedirect(w, r, errGetSession, session, msg, "/register")
 			return
 		}
 
 		err = user.Save()
 		if _, ok := err.(*mongodm.DuplicateError); ok {
 			msg := fmt.Sprintf("the email %s is already taken", user.Email)
-			http.Error(w, msg, http.StatusBadRequest)
+			c.flashAndRedirect(w, r, errGetSession, session, msg, "/register")
 			return
 		} else if err != nil {
 			fmt.Print(err)
 			msg := "server error"
-			http.Error(w, msg, http.StatusInternalServerError)
+			c.flashAndRedirect(w, r, errGetSession, session, msg, "/register")
 			return
 		}
 		sessionId := c.genSessionId(user.Id)

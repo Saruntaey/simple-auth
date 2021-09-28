@@ -8,7 +8,7 @@ import (
 
 type Session struct {
 	Id       bson.ObjectId `json:"id" bson:"_id"`
-	User     bson.ObjectId `json:"-" bson:"user"`
+	User     bson.ObjectId `json:"-" bson:"user,omitempty"`
 	Expired  time.Time     `json:"-" bson:"expired"`
 	FlashMsg *FlashMsg     `json:"-" bson:"flashMsg,omitempty"`
 }
