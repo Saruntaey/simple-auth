@@ -13,10 +13,10 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-func (c *Controller) getSession(w http.ResponseWriter, r *http.Request) (*models.Session, error) {
+func (c *Controller) getSession(w http.ResponseWriter, r *http.Request) (*models.Session, *models.FlashMsg, error) {
 	cookie, err := r.Cookie("session")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sid := cookie.Value
 	query := bson.M{
@@ -28,29 +28,31 @@ func (c *Controller) getSession(w http.ResponseWriter, r *http.Request) (*models
 	err = q.One(session)
 	if err != nil {
 		c.delCookie(w)
-		return nil, err
+		return nil, nil, err
 	}
 	// check if the session expired
 	if time.Now().After(session.Expired) {
 		// delete session from DB
 		c.appConfig.Session.RemoveId(session.Id)
 		c.delCookie(w)
-		return nil, errors.New("session is expired")
+		return nil, nil, errors.New("session is expired")
 	}
 
-	// extend session expiration
+	// extend session expiration and delete flash message
 	exp, err := strconv.Atoi(os.Getenv("SESSION_EXPIRED"))
 	if err != nil {
 		log.Println("SESSION_EXPIRED should be number in minute: ", err)
 	}
 	session.Expired = time.Now().Add(time.Minute * time.Duration(exp))
+	flashMsg := session.FlashMsg
+	session.FlashMsg = nil
 	change := mgo.Change{
 		Update:    session,
 		ReturnNew: true,
 	}
 	// save session to DB
 	q.Apply(change, session)
-	return session, nil
+	return session, flashMsg, nil
 }
 
 func (c *Controller) delCookie(w http.ResponseWriter) {
