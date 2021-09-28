@@ -123,7 +123,7 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
 // @route   GET /me
 // @access  Private
 func (c *Controller) GetMe(w http.ResponseWriter, r *http.Request) {
-	session, err := c.getSession(r)
+	session, err := c.getSession(w, r)
 	if err != nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
