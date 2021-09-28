@@ -9,6 +9,7 @@ import (
 
 	"github.com/saruntaey/simple-auth/models"
 	"github.com/zebresel-com/mongodm"
+	"gopkg.in/mgo.v2"
 )
 
 type Config struct {
@@ -44,6 +45,19 @@ func New() *Config {
 
 	// mouth models to DB
 	cnn.Register(&models.User{}, "users")
+
+	// make field email in User model unique
+	index := mgo.Index{
+		Key:        []string{"email"},
+		Unique:     true,
+		DropDups:   false,
+		Background: true,
+		Sparse:     true,
+	}
+	err = cnn.Session.DB(os.Getenv("MONGO_DB")).C("users").EnsureIndex(index)
+	if err != nil {
+		log.Fatal("Fail to ensure index: ", err)
+	}
 
 	// load template to memory
 	tmpls := map[string]*template.Template{}

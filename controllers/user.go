@@ -1,12 +1,13 @@
 package controllers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/saruntaey/simple-auth/config"
 	"github.com/saruntaey/simple-auth/models"
+	"github.com/zebresel-com/mongodm"
 )
 
 type data struct {
@@ -29,25 +30,57 @@ func New(appConfig *config.Config) *Controller {
 // @access  Public
 func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
+
 	case http.MethodGet:
 		data := data{
 			Title: "register",
 		}
-
 		c.render(w, "register", data)
 
 	case http.MethodPost:
+		r.ParseForm()
+
 		User := c.appConfig.DbConn.Model("User")
 		user := &models.User{}
 
 		User.New(user)
 
-		json.NewDecoder(r.Body).Decode(user)
-		err := user.Save()
-		if err != nil {
-			fmt.Print(err)
+		// fill data
+		user.Email = r.PostForm.Get("email")
+		user.PasswordRaw = r.PostForm.Get("password")
+		user.Name = r.PostForm.Get("name")
+
+		if valid, issues := user.ValidateCreate(); !valid {
+			msg := ""
+			for _, v := range issues {
+				msg += v.Error()
+				msg += ", "
+			}
+			msg = strings.TrimRight(msg, ", ")
+			http.Error(w, msg, http.StatusBadRequest)
+			return
 		}
-		w.Write([]byte("register"))
+
+		err := user.HashPassword()
+		if err != nil {
+			msg := err.Error()
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		}
+
+		err = user.Save()
+		if _, ok := err.(*mongodm.DuplicateError); ok {
+			msg := fmt.Sprintf("the email %s is already taken", user.Email)
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		} else if err != nil {
+			fmt.Print(err)
+			msg := "server error"
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte("registered"))
 
 	default:
 		http.Error(w, "Method not allow", http.StatusMethodNotAllowed)
