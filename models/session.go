@@ -7,7 +7,13 @@ import (
 )
 
 type Session struct {
-	Id      bson.ObjectId `json:"id" bson:"_id"`
-	User    bson.ObjectId `json:"-" bson:"user"`
-	Expired time.Time     `json:"-" bson:"expired"`
+	Id       bson.ObjectId `json:"id" bson:"_id"`
+	User     bson.ObjectId `json:"-" bson:"user"`
+	Expired  time.Time     `json:"-" bson:"expired"`
+	FlashMsg *FlashMsg     `json:"-" bson:"flashMsg,omitempty"`
+}
+
+type FlashMsg struct {
+	Msg    string `json:"-" bson:"msg,omitempty"`
+	Status string `json:"-" bson:"status,omitempty"`
 }

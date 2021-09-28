@@ -123,12 +123,16 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
 // @route   GET /me
 // @access  Private
 func (c *Controller) GetMe(w http.ResponseWriter, r *http.Request) {
-	sessionId, err := getSession(r)
+	session, err := c.getSession(r)
 	if err != nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	w.Write([]byte(sessionId))
+
+	User := c.appConfig.DbConn.Model("User")
+	user := &models.User{}
+	User.FindId(session.User).Exec(user)
+	w.Write([]byte(user.Name))
 }
 
 // @desc    Update user

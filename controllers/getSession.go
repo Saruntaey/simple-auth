@@ -1,11 +1,30 @@
 package controllers
 
-import "net/http"
+import (
+	"net/http"
+	"time"
 
-func getSession(r *http.Request) (string, error) {
-	c, err := r.Cookie("session")
+	"github.com/saruntaey/simple-auth/models"
+	"gopkg.in/mgo.v2/bson"
+)
+
+func (c *Controller) getSession(r *http.Request) (*models.Session, error) {
+	session := &models.Session{}
+	cookie, err := r.Cookie("session")
 	if err != nil {
-		return "", err
+		return session, err
 	}
-	return c.Value, nil
+	sid := cookie.Value
+	query := bson.M{
+		"_id": bson.ObjectIdHex(sid),
+		"expired": bson.M{
+			"$gt": time.Now(),
+		},
+	}
+
+	err = c.appConfig.Session.Find(query).One(session)
+	if err != nil {
+		return session, err
+	}
+	return session, nil
 }
