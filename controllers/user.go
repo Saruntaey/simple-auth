@@ -80,9 +80,11 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		sessionId := c.genSessionId(user.Id)
+
+		c.flashMsg(sessionId, "success", "Welcome to Simple-Auth")
+
 		c.sendSession(w, sessionId.Hex())
-		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte("registered"))
+		http.Redirect(w, r, "/me", http.StatusSeeOther)
 
 	default:
 		http.Error(w, "Method not allow", http.StatusMethodNotAllowed)
