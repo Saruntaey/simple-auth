@@ -11,13 +11,7 @@ import (
 	"github.com/zebresel-com/mongodm"
 )
 
-func connDB() *mongodm.Connection {
-	// get program path
-	ex, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-	exPath := filepath.Dir(ex)
+func connDB(exPath string) *mongodm.Connection {
 
 	// Load prompt text for using when validate data before save fail
 	file, err := ioutil.ReadFile(filepath.Join(exPath, "config/locals.json"))
