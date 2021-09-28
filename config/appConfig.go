@@ -12,13 +12,26 @@ import (
 )
 
 type Config struct {
-	DbConn *mongodm.Connection
-	Port   string
-	Tmpl   map[string]*template.Template
-	ExPath string
+	InProduction bool
+	DbConn       *mongodm.Connection
+	Port         string
+	Tmpls        map[string]*template.Template
+	ExPath       string
 }
 
 func New() *Config {
+	// check runing mode
+	var inProduction bool
+
+	mode := os.Getenv("GO_ENV")
+	if mode == "production" {
+		inProduction = true
+	} else if mode == "development" {
+		inProduction = false
+	} else {
+		log.Fatal(`GO_ENV should be "production" or "development"`)
+	}
+
 	// get program path
 	ex, err := os.Executable()
 	if err != nil {
@@ -33,12 +46,16 @@ func New() *Config {
 	cnn.Register(&models.User{}, "users")
 
 	// load template to memory
-	tmpl := LoadTmpl(exPath)
+	tmpls := map[string]*template.Template{}
+	if inProduction {
+		tmpls = LoadTmpls(exPath)
+	}
 
 	return &Config{
-		DbConn: cnn,
-		Port:   fmt.Sprint(":", os.Getenv("PORT")),
-		Tmpl:   tmpl,
-		ExPath: exPath,
+		InProduction: inProduction,
+		DbConn:       cnn,
+		Port:         fmt.Sprint(":", os.Getenv("PORT")),
+		Tmpls:        tmpls,
+		ExPath:       exPath,
 	}
 }

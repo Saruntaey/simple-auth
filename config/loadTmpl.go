@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func LoadTmpl(exPath string) map[string]*template.Template {
+func LoadTmpls(exPath string) map[string]*template.Template {
 	tmplCache := map[string]*template.Template{}
 
 	pagesDir, err := filepath.Glob(filepath.Join(exPath, "views/page*"))
@@ -19,13 +19,16 @@ func LoadTmpl(exPath string) map[string]*template.Template {
 		fileName := filepath.Base(pageDir)
 		name := strings.Split(fileName, ".")[1]
 
-		tmpl := template.Must(template.ParseFiles(pageDir))
-		tmpl, err = tmpl.ParseGlob(filepath.Join(exPath, "views/layout*"))
-		if err != nil {
-			log.Fatal("Fail to load layout: ", err)
-		}
+		tmpl := LoadTmpl(exPath, fileName)
 
 		tmplCache[name] = tmpl
 	}
 	return tmplCache
+}
+
+func LoadTmpl(exPath string, fileName string) *template.Template {
+	pageDir := filepath.Join(exPath, "views", fileName)
+	tmpl := template.Must(template.ParseFiles(pageDir))
+	tmpl = template.Must(tmpl.ParseGlob(filepath.Join(exPath, "views/layout*")))
+	return tmpl
 }
