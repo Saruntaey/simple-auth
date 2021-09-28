@@ -11,8 +11,9 @@ import (
 )
 
 type data struct {
-	Title string
-	Data  interface{}
+	Title    string
+	FlashMsg *models.FlashMsg
+	Data     interface{}
 }
 
 type Controller struct {
@@ -134,7 +135,12 @@ func (c *Controller) GetMe(w http.ResponseWriter, r *http.Request) {
 	User := c.appConfig.DbConn.Model("User")
 	user := &models.User{}
 	User.FindId(session.User).Exec(user)
-	w.Write([]byte(user.Name))
+	data := data{
+		Title:    "Profile",
+		FlashMsg: session.FlashMsg,
+		Data:     user,
+	}
+	c.render(w, "me", data)
 }
 
 // @desc    Update user

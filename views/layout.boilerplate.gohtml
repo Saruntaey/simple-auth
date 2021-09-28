@@ -17,9 +17,9 @@
     {{block "navbar" .}}
     {{end}}
 
-    {{if false}}
-    <div class="alert alert-{{"danger"}} alert-dismissible fade show" role="alert">
-        <strong>Holy guacamole!</strong> You should check in on some of those fields below.
+    {{if .FlashMsg}}
+    <div class="alert alert-{{.FlashMsg.Status}} alert-dismissible fade show" role="alert">
+       {{.FlashMsg.Msg}}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     {{end}}
