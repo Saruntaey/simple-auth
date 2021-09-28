@@ -79,6 +79,8 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, msg, http.StatusInternalServerError)
 			return
 		}
+		sessionId := c.genSessionId(user.Id)
+		c.sendSession(w, sessionId.Hex())
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte("registered"))
 
@@ -121,7 +123,12 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
 // @route   GET /me
 // @access  Private
 func (c *Controller) GetMe(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("get me"))
+	sessionId, err := getSession(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	w.Write([]byte(sessionId))
 }
 
 // @desc    Update user

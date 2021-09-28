@@ -15,6 +15,7 @@ import (
 type Config struct {
 	InProduction bool
 	DbConn       *mongodm.Connection
+	Session      *mgo.Collection
 	Port         string
 	Tmpls        map[string]*template.Template
 	ExPath       string
@@ -59,6 +60,9 @@ func New() *Config {
 		log.Fatal("Fail to ensure index: ", err)
 	}
 
+	// mount session to DB
+	session := cnn.Session.DB(os.Getenv("MONGO_DB")).C("sessions")
+
 	// load template to memory
 	tmpls := map[string]*template.Template{}
 	if inProduction {
@@ -68,6 +72,7 @@ func New() *Config {
 	return &Config{
 		InProduction: inProduction,
 		DbConn:       cnn,
+		Session:      session,
 		Port:         fmt.Sprint(":", os.Getenv("PORT")),
 		Tmpls:        tmpls,
 		ExPath:       exPath,
