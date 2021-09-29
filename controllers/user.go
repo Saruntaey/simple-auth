@@ -14,7 +14,7 @@ import (
 type data struct {
 	Title    string
 	FlashMsg *models.FlashMsg
-	Data     interface{}
+	User     *models.User
 }
 
 type Controller struct {
@@ -191,7 +191,7 @@ func (c *Controller) GetMe(w http.ResponseWriter, r *http.Request) {
 		data := data{
 			Title:    "Profile",
 			FlashMsg: session.FlashMsg,
-			Data:     user,
+			User:     user,
 		}
 		c.render(w, "me", data)
 
@@ -226,7 +226,7 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 
 		data := data{
 			Title: "Update profile",
-			Data:  user,
+			User:  user,
 		}
 		// add flash message to data
 		if errGetSession == nil {
