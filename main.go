@@ -16,6 +16,12 @@ func main() {
 	// init controllers
 	c := controllers.New(appConfig)
 
+	// handle favicon
+	http.Handle("/favicon.ico", http.NotFoundHandler())
+
+	// redirect root
+	http.HandleFunc("/", redirectRoot)
+
 	// mount routes
 	http.HandleFunc("/register", c.Register)
 	http.HandleFunc("/login", c.Login)
@@ -26,4 +32,8 @@ func main() {
 	// serve the app
 	fmt.Println("Listening on port: ", appConfig.Port)
 	log.Fatal(http.ListenAndServe(appConfig.Port, nil))
+}
+
+func redirectRoot(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/register", http.StatusSeeOther)
 }
