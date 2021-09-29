@@ -270,5 +270,19 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 // @route   GET /logout
 // @access  Private
 func (c *Controller) Logout(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("logout"))
+	session, errGetSession := c.NewSession().GetFromCookie(w, r)
+
+	switch r.Method {
+
+	case http.MethodGet:
+		if errGetSession != nil || len(session.SessionModel.User) == 0 {
+			session.FlashAndRedirect(w, r, "danger", "You did not login", "/login")
+			return
+		}
+		session.SessionModel.User = ""
+		session.FlashAndRedirect(w, r, "success", "You successfully logout", "/login")
+
+	default:
+		session.FlashAndRedirect(w, r, "danger", "Method not allow", "/me")
+	}
 }
