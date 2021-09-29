@@ -177,20 +177,31 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
 // @access  Private
 func (c *Controller) GetMe(w http.ResponseWriter, r *http.Request) {
 	session, errGetSession := c.NewSession().GetFromCookie(w, r)
-	if errGetSession != nil || len(session.SessionModel.User) == 0 {
-		session.FlashAndRedirect(w, r, "danger", "Please login first", "/login")
-		return
-	}
+	switch r.Method {
 
-	User := c.appConfig.DbConn.Model("User")
-	user := &models.User{}
-	User.FindId(session.SessionModel.User).Exec(user)
-	data := data{
-		Title:    "Profile",
-		FlashMsg: session.FlashMsg,
-		Data:     user,
+	case http.MethodGet:
+		if errGetSession != nil || len(session.SessionModel.User) == 0 {
+			session.FlashAndRedirect(w, r, "danger", "Please login first", "/login")
+			return
+		}
+
+		User := c.appConfig.DbConn.Model("User")
+		user := &models.User{}
+		User.FindId(session.SessionModel.User).Exec(user)
+		data := data{
+			Title:    "Profile",
+			FlashMsg: session.FlashMsg,
+			Data:     user,
+		}
+		c.render(w, "me", data)
+
+	default:
+		if errGetSession == nil && len(session.SessionModel.User) != 0 {
+			session.FlashAndRedirect(w, r, "danger", "Method not allow", "/me")
+			return
+		}
+		session.FlashAndRedirect(w, r, "danger", "Method not allow", "/login")
 	}
-	c.render(w, "me", data)
 }
 
 // @desc    Update user
