@@ -30,12 +30,12 @@ func New(appConfig *config.Config) *Controller {
 // @route   < GET | POST > /register
 // @access  Public
 func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
+	session, errGetSession := c.NewSession().GetFromCookie(w, r)
 	switch r.Method {
 
 	case http.MethodGet:
-		session, flashMsg, err := c.getSession(w, r)
 		// check if user already login
-		if err == nil && len(session.User) > 0 {
+		if errGetSession == nil && len(session.SessionModel.User) > 0 {
 			http.Redirect(w, r, "/me", http.StatusSeeOther)
 			return
 		}
@@ -44,13 +44,12 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 			Title: "register",
 		}
 		// add flash message to data
-		if err == nil {
-			data.FlashMsg = flashMsg
+		if errGetSession == nil {
+			data.FlashMsg = session.FlashMsg
 		}
 		c.render(w, "register", data)
 
 	case http.MethodPost:
-		session, _, errGetSession := c.getSession(w, r)
 		r.ParseForm()
 
 		User := c.appConfig.DbConn.Model("User")
@@ -70,7 +69,7 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 				msg += ", "
 			}
 			msg = strings.TrimRight(msg, ", ")
-			c.flashAndRedirect(w, r, errGetSession, session, msg, "/register")
+			session.FlashAndRedirect(w, r, "danger", msg, "/register")
 			return
 
 		}
@@ -78,30 +77,30 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 		err := user.HashPassword()
 		if err != nil {
 			msg := err.Error()
-			c.flashAndRedirect(w, r, errGetSession, session, msg, "/register")
+			session.FlashAndRedirect(w, r, "danger", msg, "/register")
 			return
 		}
 
 		err = user.Save()
 		if _, ok := err.(*mongodm.DuplicateError); ok {
 			msg := fmt.Sprintf("the email %s is already taken", user.Email)
-			c.flashAndRedirect(w, r, errGetSession, session, msg, "/register")
+			session.FlashAndRedirect(w, r, "danger", msg, "/register")
 			return
 		} else if err != nil {
 			fmt.Print(err)
 			msg := "server error"
-			c.flashAndRedirect(w, r, errGetSession, session, msg, "/register")
+			session.FlashAndRedirect(w, r, "danger", msg, "/register")
 			return
 		}
-		sessionId := c.genSessionId(user.Id)
 
-		c.flashMsg(sessionId, "success", "Welcome to Simple-Auth")
-
-		c.sendSession(w, sessionId.Hex())
-		http.Redirect(w, r, "/me", http.StatusSeeOther)
+		if errGetSession != nil {
+			session.InitModel()
+		}
+		session.AddUser(user.Id)
+		session.FlashAndRedirect(w, r, "success", "Welcome to Simple-Auth", "/me")
 
 	default:
-		http.Error(w, "Method not allow", http.StatusMethodNotAllowed)
+		session.FlashAndRedirect(w, r, "danger", "Method not allow", "/register")
 	}
 }
 
@@ -139,18 +138,18 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
 // @route   GET /me
 // @access  Private
 func (c *Controller) GetMe(w http.ResponseWriter, r *http.Request) {
-	session, flashMsg, err := c.getSession(w, r)
-	if err != nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+	session, errGetSession := c.NewSession().GetFromCookie(w, r)
+	if errGetSession != nil || len(session.SessionModel.User) == 0 {
+		session.FlashAndRedirect(w, r, "danger", "Please login first", "/login")
 		return
 	}
 
 	User := c.appConfig.DbConn.Model("User")
 	user := &models.User{}
-	User.FindId(session.User).Exec(user)
+	User.FindId(session.SessionModel.User).Exec(user)
 	data := data{
 		Title:    "Profile",
-		FlashMsg: flashMsg,
+		FlashMsg: session.FlashMsg,
 		Data:     user,
 	}
 	c.render(w, "me", data)

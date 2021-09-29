@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/saruntaey/simple-auth/models"
 	"github.com/zebresel-com/mongodm"
@@ -16,6 +17,7 @@ type Config struct {
 	InProduction bool
 	DbConn       *mongodm.Connection
 	Session      *mgo.Collection
+	SessionExp   int
 	Port         string
 	Tmpls        map[string]*template.Template
 	ExPath       string
@@ -63,6 +65,12 @@ func New() *Config {
 	// mount session to DB
 	session := cnn.Session.DB(os.Getenv("MONGO_DB")).C("sessions")
 
+	// lode session expiration
+	exp, err := strconv.Atoi(os.Getenv("SESSION_EXPIRED"))
+	if err != nil {
+		log.Println("SESSION_EXPIRED should be number in minute: ", err)
+	}
+
 	// load template to memory
 	tmpls := map[string]*template.Template{}
 	if inProduction {
@@ -73,6 +81,7 @@ func New() *Config {
 		InProduction: inProduction,
 		DbConn:       cnn,
 		Session:      session,
+		SessionExp:   exp,
 		Port:         fmt.Sprint(":", os.Getenv("PORT")),
 		Tmpls:        tmpls,
 		ExPath:       exPath,
