@@ -8,6 +8,7 @@ import (
 	"github.com/saruntaey/simple-auth/config"
 	"github.com/saruntaey/simple-auth/models"
 	"github.com/zebresel-com/mongodm"
+	"gopkg.in/mgo.v2/bson"
 )
 
 type data struct {
@@ -108,29 +109,66 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 // @route   < GET | POST > /login
 // @access  Public
 func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
+	session, errGetSession := c.NewSession().GetFromCookie(w, r)
+
 	switch r.Method {
+
 	case http.MethodGet:
+		// check if user already login
+		if errGetSession == nil && len(session.SessionModel.User) > 0 {
+			http.Redirect(w, r, "/me", http.StatusSeeOther)
+			return
+		}
+
 		data := data{
 			Title: "login",
 		}
-
+		// add flash message to data
+		if errGetSession == nil {
+			data.FlashMsg = session.FlashMsg
+		}
 		c.render(w, "login", data)
 
 	case http.MethodPost:
-		// User := c.appConfig.DbConn.Model("User")
-		// user := &models.User{}
+		r.ParseForm()
 
-		// User.New(user)
+		User := c.appConfig.DbConn.Model("User")
+		user := &models.User{}
 
-		// json.NewDecoder(r.Body).Decode(user)
-		// err := user.Save()
-		// if err != nil {
-		// 	fmt.Print(err)
-		// }
-		w.Write([]byte("login"))
+		email := r.PostForm.Get("email")
+		passwordRaw := r.PostForm.Get("password")
+
+		if len(email) == 0 || len(passwordRaw) == 0 {
+			session.FlashAndRedirect(w, r, "danger", "Please provide email and password", "/login")
+			return
+		}
+
+		query := bson.M{
+			"email": email,
+		}
+
+		err := User.FindOne(query).Exec(user)
+		if _, ok := err.(*mongodm.NotFoundError); ok {
+			session.FlashAndRedirect(w, r, "danger", "Invalid credential", "/login")
+			return
+		} else if err != nil {
+			session.FlashAndRedirect(w, r, "warning", "Server error", "/login")
+			return
+		}
+
+		if !user.MatchPassword(passwordRaw) {
+			session.FlashAndRedirect(w, r, "danger", "Invalid credential", "/login")
+			return
+		}
+
+		if errGetSession != nil {
+			session.InitModel()
+		}
+		session.AddUser(user.Id)
+		session.FlashAndRedirect(w, r, "success", "Welcome back", "/me")
 
 	default:
-		http.Error(w, "Method not allow", http.StatusMethodNotAllowed)
+		session.FlashAndRedirect(w, r, "danger", "Method not allow", "/login")
 	}
 }
 
