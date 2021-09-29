@@ -294,6 +294,10 @@ func (c *Controller) Logout(w http.ResponseWriter, r *http.Request) {
 		session.FlashAndRedirect(w, r, "success", "You successfully logout", "/login")
 
 	default:
-		session.FlashAndRedirect(w, r, "danger", "Method not allow", "/me")
+		if errGetSession == nil && len(session.SessionModel.User) != 0 {
+			session.FlashAndRedirect(w, r, "danger", "Method not allow", "/me")
+			return
+		}
+		session.FlashAndRedirect(w, r, "danger", "Method not allow", "/login")
 	}
 }
