@@ -194,10 +194,39 @@ func (c *Controller) GetMe(w http.ResponseWriter, r *http.Request) {
 }
 
 // @desc    Update user
-// @route   < GET | PUT > /update
+// @route   < GET | POST > /update
 // @access  Private
 func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("update details"))
+	session, errGetSession := c.NewSession().GetFromCookie(w, r)
+
+	switch r.Method {
+
+	case http.MethodGet:
+		// check if user login
+		if errGetSession != nil || len(session.SessionModel.User) == 0 {
+			session.FlashAndRedirect(w, r, "danger", "Please login first", "/login")
+			return
+		}
+
+		// find user in DB
+		User := c.appConfig.DbConn.Model("User")
+		user := &models.User{}
+		User.FindId(session.SessionModel.User).Exec(user)
+
+		data := data{
+			Title: "Update profile",
+			Data:  user,
+		}
+		// add flash message to data
+		if errGetSession == nil {
+			data.FlashMsg = session.FlashMsg
+		}
+		c.render(w, "update", data)
+	case http.MethodPost:
+		w.Write([]byte("updating"))
+	default:
+		session.FlashAndRedirect(w, r, "danger", "Method not allow", "/update")
+	}
 }
 
 // @desc    Logout user
