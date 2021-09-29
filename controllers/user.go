@@ -273,7 +273,11 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 		session.FlashAndRedirect(w, r, "success", "Your name was updated", "/me")
 
 	default:
-		session.FlashAndRedirect(w, r, "danger", "Method not allow", "/update")
+		if errGetSession == nil && len(session.SessionModel.User) != 0 {
+			session.FlashAndRedirect(w, r, "danger", "Method not allow", "/update")
+			return
+		}
+		session.FlashAndRedirect(w, r, "danger", "Method not allow", "/login")
 	}
 }
 
