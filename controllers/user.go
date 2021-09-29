@@ -222,8 +222,45 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 			data.FlashMsg = session.FlashMsg
 		}
 		c.render(w, "update", data)
+
 	case http.MethodPost:
-		w.Write([]byte("updating"))
+		// check if user login
+		if errGetSession != nil || len(session.SessionModel.User) == 0 {
+			session.FlashAndRedirect(w, r, "danger", "Please login first", "/login")
+			return
+		}
+
+		r.ParseForm()
+
+		name := r.PostForm.Get("name")
+		if len(name) == 0 {
+			session.FlashAndRedirect(w, r, "danger", "Please provide name", "/update")
+			return
+		}
+
+		User := c.appConfig.DbConn.Model("User")
+		user := &models.User{}
+
+		err := User.FindId(session.SessionModel.User).Exec(user)
+		if err != nil {
+			session.FlashAndRedirect(w, r, "warning", "Server error", "/update")
+			return
+		}
+
+		d := map[string]interface{}{
+			"name": name,
+		}
+
+		// The Update method is incompleted so the error is not handled
+		// see https://github.com/zebresel-com/mongodm/issues/20
+		user.Update(d)
+		err = user.Save()
+		if err != nil {
+			session.FlashAndRedirect(w, r, "warning", "Server error", "/update")
+			return
+		}
+		session.FlashAndRedirect(w, r, "success", "Your name was updated", "/me")
+
 	default:
 		session.FlashAndRedirect(w, r, "danger", "Method not allow", "/update")
 	}
